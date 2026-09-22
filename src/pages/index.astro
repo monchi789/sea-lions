@@ -1,11 +1,339 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
 ---
 
-<Layout>
-	<Welcome />
+<Layout title="Foquitas 🦭" description="Una foquita diferente cada vez.">
+	<main class="stage">
+		<header class="header">
+			<h1 class="title">
+				<span class="title__emoji" aria-hidden="true">🦭</span>
+				<span>Foquitas</span>
+			</h1>
+			<p class="subtitle">Una foquita cada vez que lo necesites</p>
+		</header>
+
+		<section class="viewer" aria-live="polite" aria-busy="true">
+			<div class="viewer__frame" data-frame>
+				<div class="viewer__placeholder" data-placeholder>
+					<div class="spinner" aria-hidden="true"></div>
+					<p>Cargando foquita…</p>
+				</div>
+
+				<img
+					class="viewer__gif"
+					data-gif
+					alt="Foquita GIF"
+					loading="eager"
+					decoding="async"
+				/>
+			</div>
+
+			<button
+				class="refresh"
+				type="button"
+				data-refresh
+				aria-label="Refrescar foquita"
+			>
+				<svg
+					class="refresh__icon"
+					viewBox="0 0 24 24"
+					width="20"
+					height="20"
+					aria-hidden="true"
+				>
+					<path
+						fill="currentColor"
+						d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"
+					/>
+				</svg>
+				<span class="refresh__label">Refrescar</span>
+			</button>
+
+			<p class="error" role="alert" data-error hidden></p>
+		</section>
+	</main>
 </Layout>
+
+<script>
+	type GiphyData = {
+		id: string;
+		title: string;
+		url: string;
+		images: {
+			original: { url: string; width: string; height: string };
+		};
+	};
+
+	const QUERY_TERMS = [
+		'sea lion',
+		'seal',
+		'sea lion cute',
+		'baby seal',
+		'sea lion funny',
+		'otter',
+	];
+
+	const API_KEY = import.meta.env.PUBLIC_GIPHY_API_KEY ?? '';
+
+	const frame = document.querySelector<HTMLDivElement>('[data-frame]');
+	const gif = document.querySelector<HTMLImageElement>('[data-gif]');
+	const placeholder = document.querySelector<HTMLDivElement>('[data-placeholder]');
+	const refreshBtn = document.querySelector<HTMLButtonElement>('[data-refresh]');
+	const errorEl = document.querySelector<HTMLParagraphElement>('[data-error]');
+	const viewer = document.querySelector<HTMLElement>('.viewer');
+
+	if (frame && gif && placeholder && refreshBtn && errorEl && viewer) {
+		const setLoading = (loading: boolean) => {
+			viewer.setAttribute('aria-busy', loading ? 'true' : 'false');
+			refreshBtn.disabled = loading;
+			refreshBtn.classList.toggle('refresh--loading', loading);
+			placeholder.style.display = loading ? '' : 'none';
+		};
+
+		const showError = (msg: string) => {
+			errorEl.textContent = msg;
+			errorEl.hidden = false;
+		};
+
+		const clearError = () => {
+			errorEl.textContent = '';
+			errorEl.hidden = true;
+		};
+
+		const loadFoquita = async () => {
+			clearError();
+			setLoading(true);
+
+			if (!API_KEY) {
+				setLoading(false);
+				showError('Falta la API key de Giphy en el build.');
+				return;
+			}
+
+			try {
+				const term = QUERY_TERMS[Math.floor(Math.random() * QUERY_TERMS.length)];
+				const offset = Math.floor(Math.random() * 50);
+				const url =
+					`https://api.giphy.com/v1/gifs/search` +
+					`?api_key=${encodeURIComponent(API_KEY)}` +
+					`&q=${encodeURIComponent(term)}` +
+					`&limit=1&offset=${offset}&rating=g&lang=en`;
+
+				const res = await fetch(url);
+				if (!res.ok) throw new Error(`HTTP ${res.status}`);
+				const json = (await res.json()) as { data?: GiphyData[] };
+				const item = json.data?.[0];
+				const gifUrl = item?.images?.original?.url;
+				if (!gifUrl) throw new Error('Sin resultados');
+
+				gif.src = gifUrl;
+				gif.alt = item.title || 'Foquita GIF';
+
+				gif.onload = () => setLoading(false);
+				gif.onerror = () => {
+					setLoading(false);
+					showError('No se pudo cargar el GIF. Inténtalo de nuevo.');
+				};
+			} catch (err) {
+				setLoading(false);
+				showError('Error al buscar una foquita. Revisa tu conexión.');
+			}
+		};
+
+		refreshBtn.addEventListener('click', loadFoquita);
+		document.addEventListener('keydown', (e) => {
+			if (e.target instanceof HTMLButtonElement) return;
+			if (e.key === ' ' || e.key.toLowerCase() === 'r') {
+				e.preventDefault();
+				loadFoquita();
+			}
+		});
+
+		loadFoquita();
+	}
+</script>
+
+<style>
+	.stage {
+		min-height: 100svh;
+		min-height: 100dvh;
+		display: grid;
+		grid-template-rows: auto 1fr;
+		gap: clamp(1rem, 3vw, 2rem);
+		padding: clamp(1rem, 4vw, 2.5rem);
+		max-width: 1400px;
+		margin: 0 auto;
+	}
+
+	.header {
+		text-align: center;
+	}
+
+	.title {
+		margin: 0;
+		font-size: clamp(1.75rem, 5vw, 3rem);
+		font-weight: 800;
+		letter-spacing: -0.02em;
+		background: linear-gradient(135deg, #ffffff 0%, #9ec5ff 100%);
+		-webkit-background-clip: text;
+		background-clip: text;
+		-webkit-text-fill-color: transparent;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.title__emoji {
+		-webkit-text-fill-color: initial;
+		background: none;
+		display: inline-block;
+		transform: translateY(-2px);
+	}
+
+	.subtitle {
+		margin: 0.5rem 0 0;
+		color: #b9c8df;
+		font-size: clamp(0.9rem, 2vw, 1.1rem);
+	}
+
+	.viewer {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: clamp(1rem, 2.5vw, 1.5rem);
+		width: 100%;
+	}
+
+	.viewer__frame {
+		position: relative;
+		width: min(100%, 1100px);
+		aspect-ratio: 1 / 1;
+		background: rgba(255, 255, 255, 0.04);
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: clamp(12px, 2vw, 24px);
+		overflow: hidden;
+		box-shadow:
+			0 30px 80px -30px rgba(0, 0, 0, 0.6),
+			inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+		display: grid;
+		place-items: center;
+	}
+
+	.viewer__gif {
+		max-width: 100%;
+		max-height: 100%;
+		width: auto;
+		height: auto;
+		object-fit: contain;
+		display: block;
+		opacity: 0;
+		transition: opacity 200ms ease;
+	}
+
+	.viewer__gif[src]:not([src='']) {
+		opacity: 1;
+	}
+
+	.viewer__placeholder {
+		position: absolute;
+		inset: 0;
+		display: grid;
+		place-items: center;
+		gap: 1rem;
+		color: #9ec5ff;
+		font-size: 0.95rem;
+		text-align: center;
+		padding: 1rem;
+	}
+
+	.spinner {
+		width: 42px;
+		height: 42px;
+		border-radius: 50%;
+		border: 3px solid rgba(158, 197, 255, 0.25);
+		border-top-color: #9ec5ff;
+		animation: spin 0.9s linear infinite;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	.refresh {
+		appearance: none;
+		border: 0;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.6rem;
+		padding: clamp(0.75rem, 2vw, 1rem) clamp(1.25rem, 3vw, 1.75rem);
+		border-radius: 999px;
+		background: linear-gradient(135deg, #4f8cff 0%, #6f5cff 100%);
+		color: #fff;
+		font-size: clamp(0.95rem, 2vw, 1.05rem);
+		font-weight: 600;
+		letter-spacing: 0.01em;
+		box-shadow:
+			0 10px 30px -10px rgba(79, 140, 255, 0.7),
+			inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+		transition:
+			transform 120ms ease,
+			box-shadow 200ms ease,
+			opacity 200ms ease;
+	}
+
+	.refresh:hover:not(:disabled) {
+		transform: translateY(-1px);
+		box-shadow:
+			0 14px 36px -10px rgba(79, 140, 255, 0.85),
+			inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+	}
+
+	.refresh:active:not(:disabled) {
+		transform: translateY(0);
+	}
+
+	.refresh:focus-visible {
+		outline: 2px solid #9ec5ff;
+		outline-offset: 3px;
+	}
+
+	.refresh:disabled {
+		opacity: 0.7;
+		cursor: progress;
+	}
+
+	.refresh--loading .refresh__icon {
+		animation: spin 0.9s linear infinite;
+	}
+
+	.error {
+		color: #ffb3b3;
+		background: rgba(255, 80, 80, 0.08);
+		border: 1px solid rgba(255, 80, 80, 0.25);
+		padding: 0.6rem 0.9rem;
+		border-radius: 10px;
+		margin: 0;
+		font-size: 0.9rem;
+		text-align: center;
+	}
+
+	@media (orientation: landscape) and (max-height: 500px) {
+		.viewer__frame {
+			aspect-ratio: 16 / 10;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.spinner,
+		.refresh--loading .refresh__icon {
+			animation: none;
+		}
+		.viewer__gif {
+			transition: none;
+		}
+	}
+</style>

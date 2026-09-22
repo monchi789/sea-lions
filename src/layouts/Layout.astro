@@ -1,23 +1,68 @@
+---
+interface Props {
+	title?: string;
+	description?: string;
+}
+
+const {
+	title = 'Foquitas',
+	description = 'Una foquita diferente cada vez.',
+} = Astro.props;
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+
 <!doctype html>
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<meta name="description" content={description} />
+		<meta name="theme-color" content="#0b1d3a" />
+		<link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+		<link rel="icon" href={`${base}favicon.ico`} />
 		<meta name="generator" content={Astro.generator} />
-		<title>Astro Basics</title>
+		<title>{title}</title>
 	</head>
 	<body>
 		<slot />
 	</body>
 </html>
 
-<style>
+<style is:global>
+	*,
+	*::before,
+	*::after {
+		box-sizing: border-box;
+	}
+
 	html,
 	body {
 		margin: 0;
+		padding: 0;
 		width: 100%;
-		height: 100%;
+		min-height: 100%;
+	}
+
+	html {
+		background: #0b1d3a;
+	}
+
+	body {
+		font-family:
+			Inter,
+			Roboto,
+			'Helvetica Neue',
+			'Arial Nova',
+			'Nimbus Sans',
+			Arial,
+			sans-serif;
+		color: #f3f6fb;
+		min-height: 100svh;
+		min-height: 100dvh;
+		background:
+			radial-gradient(1200px 600px at 50% -10%, #1d3a6b 0%, transparent 60%),
+			radial-gradient(900px 500px at 100% 100%, #1a4f7a 0%, transparent 55%),
+			linear-gradient(180deg, #0b1d3a 0%, #08152b 100%);
 	}
 </style>
